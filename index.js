@@ -75,14 +75,16 @@ const response = (res, data, status = 200) => {
     res.end();
 };
 
-async function main() {
-    const server = new http.Server()
-    server.on('request', async (req, res) => {
-        const { method, headers } = req;
-        const requestId = headers['x-request-id'] || '-';
-        if (method === 'GET') {
+const request = async (req, res) => {
+    const { method, headers } = req;
+    const requestId = headers['x-request-id'] || '-';
+
+    switch (method) {
+        case 'GET':
             response(res, {status: 'OK', stats});
-        } else if (method === 'POST') {
+            break;
+
+        case 'POST':
             stats.scans++;
             stats.concurrent++;
             stats.maxConcurrent = Math.max(stats.maxConcurrent, stats.concurrent);
@@ -108,13 +110,16 @@ async function main() {
                 if (filename) fs.unlink(filename, () =>
                     log('Removed file from disk', requestId));
             }
-        } else {
+            break;
+        default:
             response(res, {status: 'METHOD_NOT_ALLOWED', method}, 405);
-        }
-    });
+    }
+};
 
-    server.listen(config.port, () =>
-        log('Server listening on port ' + config.port));
-}
 
-main().catch(console.error);
+const server = new http.Server();
+server.on('request', request);
+server.listen(config.port, () =>
+    log('Server listening on port ' + config.port));
+
+
